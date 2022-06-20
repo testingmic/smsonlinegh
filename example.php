@@ -1,22 +1,24 @@
 <?php
 include 'SMSOnline.php';
 $SMSObj = new SMSOnline;
+$SMSObj->sender_id = 'SENDER_ID';
+$SMSObj->apikey = 'API_KEY';
 
 // get the delivery status using the message reference id
-$data['request'] = 'delivery';
+$SMSObj->request = 'delivery';
 $data['data'] = ['reference' => '3129c4072af554c2c1c0d858c59ccf49'];
 
 // personalized messages
 $data = [];
-$data['request'] = 'send';
+$SMSObj->request = 'send';
 $data['recipient'] = [
-    ['fullname' => 'Emmanuel Obeng', 'contact' => '0550107770', 'message' => 'There will be service tomorrow evening.'],
-    ['fullname' => 'Fred Asamoah', 'contact' => '0571408340', 'message' => 'Kindly note that service has been postponed.']
+    ['name' => 'Test User', 'contact' => '0123456789', 'message' => 'There will be service tomorrow evening.'],
+    ['name' => 'Another Person', 'contact' => '9876543210', 'message' => 'Kindly note that service has been postponed.']
 ];
 
 // get the account balance
 $data = [];
-$data['request'] = 'balance';
+$SMSObj->request = 'balance';
 
 $request = $SMSObj->push($data);
 

@@ -2,8 +2,7 @@
 class SMSOnline {
 
     private $per_sms = 150;
-    private $sender = 'SENDER_ID';
-    private $apikey = 'API_KEY';
+    public $request;
 
     private $endpoint = [
         'delivery' => [
@@ -22,22 +21,22 @@ class SMSOnline {
 
     public function push(array $params = []) {
         
-        if( !isset($params['request']) ) {
+        if( empty($this->request) ) {
             return 'Sorry! The request parameter is required.';
         }
 
-        if( !isset($this->endpoint[$params['request']]) ) {
+        if( !isset($this->endpoint[$this->request]) ) {
             return 'Sorry! An invalid request endpoint was parsed.';
         }
 
         // set the endpoint
-        $params['endpoint'] = $this->endpoint[$params['request']];
+        $params['endpoint'] = $this->endpoint[$this->request];
 
         // if the request is send
-        if( in_array($params['request'], ['send']) ) {
+        if( in_array($this->request, ['send']) ) {
 
             // set the send of the message
-            $params['message']['messages'][0]['sender'] = $this->sender;
+            $params['message']['messages'][0]['sender'] = $this->sender_id;
 
             // set the message to send
             $params['message']['messages'][0]['type'] = 0;
@@ -55,11 +54,12 @@ class SMSOnline {
             foreach($params['recipient'] as $key => $person) {
 
                 // confirm that the contact number is set 
-                if( !isset($person['contact']) ) {
-                    $bugs[] = "Sorry! The contact number on Row {$key} is empty";
+                if( !isset($person['contact']) || (isset($person['contact']) && !$this->isvalid_phone($person['contact']))) {
+                    $bugs[] = "Sorry! An invalid contact number ({$person['contact']}) for user on row ".($key + 1)." was detected.";
                 } else {
+
                     // set the fullname if empty
-                    $fullname = $person['fullname'] ?? 'User';
+                    $fullname = $person['name'] ?? 'User';
 
                     // set the destination
                     $params['message']['messages'][0]['destinations'][] = [
@@ -73,10 +73,10 @@ class SMSOnline {
             unset($params['recipient']);
 
             // end query if the bug is not empty
-            if(!empty($bug)) {
+            if(!empty($bugs)) {
                 $error = "";
                 foreach($bugs as $bug) {
-                    $error .= $bug . "\n";
+                    $error .= $bug . "<br>";
                 }
                 return $error;
             }
@@ -112,26 +112,31 @@ class SMSOnline {
                     return "Sorry! Your outstanding balance is {$balance} which is ".($balance - $count)." units less than the current message to be sent.";
                 }
             }
+        }
 
-            // perform the request and return the result
-            $push = $this->process($params);
+        // perform the request and return the result
+        $request = $this->process($params);
 
-            // only return success when all goes well
-            if(isset($push['handshake']['label'])) {
-                if($push['handshake']['label'] == "HSHK_OK") {
-                    return [
-                        'status' => "success",
-                        'message' => "The message was successfully sent to {$number} recipients.",
-                        'request' => $push
-                    ];
-                }
-            }
+        // only return success when all goes well
+        if(isset($request['handshake']['label'])) {
 
-            return $push;
+            // get the response
+            $response = $this->responses($request['handshake']['label'], $number ?? null);
+
+            // return the result
+            return [
+                'status' => $response['code'],
+                'message' => $response['msg'],
+                'data' => $request['data']['messages'] ?? $request['data']
+            ];
 
         }
 
-        return $this->process($params);
+        return [
+            'status' => 'error',
+            'message' => 'Sorry! An unexpected error was encountered while processing the request.',
+            'data' => $request
+        ];
 
     }
 
@@ -168,6 +173,35 @@ class SMSOnline {
         $result = json_decode($response, true);
 
 		return $result;
+
+    }
+    
+    private function isvalid_phone($number) {
+        return (bool) preg_match("/^[+0-9]{8,15}+$/", $number);
+    }
+
+    private function responses($label, $number = 0){
+        
+        $response = [
+            'HSHK_OK' => [
+                'code' => 'success',
+                'msg' => !empty($number) ? "The message was successfully sent to {$number} recipients." : "The request was successfully processed.",
+            ],
+            'HSHK_ERR_UA_AUTH' => [
+                'code' => 'invalid_key',
+                'msg' => 'Sorry! An invalid API Key was supplied'
+            ],
+            'HSHK_ERR_SM_DATETIME' => [
+                'code' => 'invalid_date',
+                'msg' => 'Sorry! An invalid datetime was supplied for the schedule parameter.'
+            ],
+            'MV_ERR_TPL_REF_INVALID' => [
+                'code' => 'invalid',
+                'msg' => 'Sorry! An invalid message reference id was submitted.'
+            ]
+        ];
+
+        return $response[$label] ?? ['code' => 'unknown', 'msg' => 'An unknown label returned.', 'label' => $label];
 
     }
 
