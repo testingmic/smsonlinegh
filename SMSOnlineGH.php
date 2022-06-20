@@ -20,7 +20,42 @@ class SMSOnlineGH {
         ],
     ];
 
-    public function push(array $params = []) {
+    public function send($data = null) {
+
+        // set the request to balance
+        $this->request = 'send';
+
+        // return the response
+        return $this->push($data);
+    }
+
+    public function status($reference_id = null) {
+
+        // check if the reference id is empty
+        if( empty($reference_id) ) {
+            return [
+                'code' => $this->responses('MV_ERR_TPL_REF_INVALID')['code'],
+                'msg' => $this->responses('MV_ERR_TPL_REF_INVALID')['msg']
+            ];
+        }
+
+        // set the request to balance
+        $this->request = 'delivery';
+
+        // return the response
+        return $this->push(['reference' => $reference_id]);
+    }
+
+    public function balance() {
+
+        // set the request to balance
+        $this->request = 'balance';
+
+        // return the response
+        return $this->push();
+    }
+
+    private function push(array $params = []) {
         
         if( empty($this->request) ) {
             return 'Sorry! The request parameter is required.';
@@ -141,42 +176,7 @@ class SMSOnlineGH {
 
     }
 
-    public function send($data = null) {
-
-        // set the request to balance
-        $this->request = 'send';
-
-        // return the response
-        return $this->push($data);
-    }
-
-    public function status($reference_id = null) {
-
-        // check if the reference id is empty
-        if( empty($reference_id) ) {
-            return [
-                'code' => $this->responses('MV_ERR_TPL_REF_INVALID')['code'],
-                'msg' => $this->responses('MV_ERR_TPL_REF_INVALID')['code']
-            ];
-        }
-
-        // set the request to balance
-        $this->request = 'delivery';
-
-        // return the response
-        return $this->push(['reference' => $reference_id]);
-    }
-
-    public function balance() {
-
-        // set the request to balance
-        $this->request = 'balance';
-
-        // return the response
-        return $this->push();
-    }
-
-    public function process($data) {
+    private function process($data) {
 
         // initialize the curl request
         $curl = curl_init($data['endpoint']['url']);

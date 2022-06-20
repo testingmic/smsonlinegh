@@ -3,11 +3,15 @@
 A PHP 7.4+ SMSOnlineGH class is on the [implementation](https://github.com/ZenophTechnologies/php-sms-api-ghana) by [ZenophTechnologies](https://github.com/ZenophTechnologies), cleaned up and simplified.
 
 ### Quickstart
-Use this class to perform simple api requests to the smsonlinegh Platform
-
+Use this class to perform simple api requests to the smsonlinegh Platform<br><br>
+Include the Class in the file to perform the request
 ```php
 include 'SMSOnline.php';
-$SMSObj = new SMSOnline;
+```
+
+Create a new object of the file and set the Sender ID and the Api Keys
+```php
+$SMSObj = new SMSOnline();
 $SMSObj->sender = 'SENDER_ID';
 $SMSObj->apikey = 'API_KEY';
 ```
@@ -59,6 +63,8 @@ Sample request response:
 ```
 
 ### Send Personalized Message
+Use this method to send an sms to multiple contacts all at a go. Parse the Name, Contact and Message to send 
+in an array and set it as the value before making the request.
 ```php
 $data['recipient'] = [
     ['name' => 'Test User', 'contact' => '0123456789', 'message' => 'There will be service tomorrow evening.'],
