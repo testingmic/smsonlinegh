@@ -1,7 +1,8 @@
 <?php 
-class SMSOnline {
+class SMSOnlineGH {
 
     private $per_sms = 150;
+    public $message;
     public $request;
 
     private $endpoint = [
@@ -133,11 +134,46 @@ class SMSOnline {
         }
 
         return [
-            'status' => 'error',
+            'status' => 'unexpected_error',
             'message' => 'Sorry! An unexpected error was encountered while processing the request.',
             'data' => $request
         ];
 
+    }
+
+    public function send($data = null) {
+
+        // set the request to balance
+        $this->request = 'send';
+
+        // return the response
+        return $this->push($data);
+    }
+
+    public function status($reference_id = null) {
+
+        // check if the reference id is empty
+        if( empty($reference_id) ) {
+            return [
+                'code' => $this->responses('MV_ERR_TPL_REF_INVALID')['code'],
+                'msg' => $this->responses('MV_ERR_TPL_REF_INVALID')['code']
+            ];
+        }
+
+        // set the request to balance
+        $this->request = 'delivery';
+
+        // return the response
+        return $this->push(['reference' => $reference_id]);
+    }
+
+    public function balance() {
+
+        // set the request to balance
+        $this->request = 'balance';
+
+        // return the response
+        return $this->push();
     }
 
     public function process($data) {
@@ -196,7 +232,7 @@ class SMSOnline {
                 'msg' => 'Sorry! An invalid datetime was supplied for the schedule parameter.'
             ],
             'MV_ERR_TPL_REF_INVALID' => [
-                'code' => 'invalid',
+                'code' => 'invalid_reference',
                 'msg' => 'Sorry! An invalid message reference id was submitted.'
             ]
         ];
