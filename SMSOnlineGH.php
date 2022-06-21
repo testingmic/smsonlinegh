@@ -31,8 +31,8 @@ class SMSOnlineGH {
             // validate date time
             if( empty($data['schedule']) || (!empty($data['schedule']) && !$this->isvalid_datetime($data['schedule']))) {
                 return [
-                    'status' => 'error',
-                    'msg' => 'An invalid datetime was parsed as the schedule value.'
+                    'status' => $this->responses('HSHK_ERR_SM_DATETIME')['code'],
+                    'msg' => $this->responses('HSHK_ERR_SM_DATETIME')['msg']
                 ];
             }
             $this->url_param = ['schedule' => $data['schedule']];
