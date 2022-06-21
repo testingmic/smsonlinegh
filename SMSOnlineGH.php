@@ -2,6 +2,7 @@
 class SMSOnlineGH {
 
     private $per_sms = 150;
+    private $url_param;
     public $message;
     public $request;
 
@@ -25,6 +26,18 @@ class SMSOnlineGH {
         // set the request to balance
         $this->request = 'send';
 
+        // if the schedule parameter was parsed
+        if(isset($data['schedule'])) {
+            // validate date time
+            if( empty($data['schedule']) || (!empty($data['schedule']) && !$this->isvalid_datetime($data['schedule']))) {
+                return [
+                    'status' => 'error',
+                    'msg' => 'An invalid datetime was parsed as the schedule value.'
+                ];
+            }
+            $this->url_param = ['schedule' => $data['schedule']];
+        }
+        
         // return the response
         return $this->push($data);
     }
@@ -34,7 +47,7 @@ class SMSOnlineGH {
         // check if the reference id is empty
         if( empty($reference_id) ) {
             return [
-                'code' => $this->responses('MV_ERR_TPL_REF_INVALID')['code'],
+                'status' => $this->responses('MV_ERR_TPL_REF_INVALID')['code'],
                 'msg' => $this->responses('MV_ERR_TPL_REF_INVALID')['msg']
             ];
         }
@@ -43,7 +56,7 @@ class SMSOnlineGH {
         $this->request = 'delivery';
 
         // return the response
-        return $this->push(['reference' => $reference_id]);
+        return $this->push(['data' => ['reference' => $reference_id]]);
     }
 
     public function balance() {
@@ -58,11 +71,17 @@ class SMSOnlineGH {
     private function push(array $params = []) {
         
         if( empty($this->request) ) {
-            return 'Sorry! The request parameter is required.';
+            return [
+                'status' => 'error',
+                'msg' => 'Sorry! The request parameter is required.'
+            ];
         }
 
-        if( !isset($this->endpoint[$this->request]) ) {
-            return 'Sorry! An invalid request endpoint was parsed.';
+        if(!isset($this->endpoint[$this->request])) {
+            return [
+                'status' => 'error',
+                'msg' => 'Sorry! An invalid request endpoint was parsed.'
+            ];
         }
 
         // set the endpoint
@@ -80,7 +99,10 @@ class SMSOnlineGH {
 
             // ensure the recipient list parameter is not empty
             if(empty($params['recipient']) || (isset($params['recipient']) && !is_array($params['recipient']))) {
-                return 'Sorry! The recipient list cannot be empty';
+                return [
+                    'status' => 'error',
+                    'msg' => 'Sorry! The recipient list cannot be empty'
+                ];
             }
 
             // init value for bug
@@ -139,7 +161,7 @@ class SMSOnlineGH {
             $bal_param['endpoint'] = $this->endpoint['balance'];
 
             // get the balance
-            $balance = $this->process($bal_param);
+            $balance = $this->curl($bal_param);
 
             // get the balance difference
             if(isset($balance['data']['balance'])) {
@@ -151,7 +173,7 @@ class SMSOnlineGH {
         }
 
         // perform the request and return the result
-        $request = $this->process($params);
+        $request = $this->curl($params);
 
         // only return success when all goes well
         if(isset($request['handshake']['label'])) {
@@ -176,17 +198,20 @@ class SMSOnlineGH {
 
     }
 
-    private function process($data) {
+    private function curl($data) {
 
         // initialize the curl request
-        $curl = curl_init($data['endpoint']['url']);
+        $curl = curl_init();
 
         // set the data
         $form = isset($data['data']) ? $data['data'] : ($data['message'] ?? []);
 
+        // set the url
+        $url = $data['endpoint']['url'] . (!empty($this->url_param) ? '?' . http_build_query($this->url_param) : null);
+
         // set the curl array data
         curl_setopt_array($curl, [
-			CURLOPT_URL => $data['endpoint']['url'],
+			CURLOPT_URL => $url,
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_ENCODING => '',
 			CURLOPT_MAXREDIRS => 10,
@@ -212,11 +237,16 @@ class SMSOnlineGH {
 
     }
     
-    private function isvalid_phone($number) {
+    private function isvalid_phone($number = null) : bool {
         return (bool) preg_match("/^[+0-9]{8,15}+$/", $number);
     }
 
-    private function responses($label, $number = 0){
+    private function isvalid_datetime($datetime = null) : bool {
+        $d = DateTime::createFromFormat('Y-m-d H:i', $datetime);
+        return $d && $d->format('Y-m-d H:i') == $datetime;
+    }
+
+    private function responses($label, $number = 0) : array {
         
         $response = [
             'HSHK_OK' => [

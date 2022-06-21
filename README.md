@@ -11,7 +11,7 @@ include 'SMSOnline.php';
 
 Create a new object of the file and set the Sender ID and the Api Keys
 ```php
-$SMSObj = new SMSOnline();
+$SMSObj = new SMSOnlineGH();
 $SMSObj->sender = 'SENDER_ID';
 $SMSObj->apikey = 'API_KEY';
 ```
@@ -66,6 +66,19 @@ Sample request response:
 Use this method to send an sms to multiple contacts all at a go. Parse the Name, Contact and Message to send 
 in an array and set it as the value before making the request.
 ```php
+$data['recipient'] = [
+    ['name' => 'Test User', 'contact' => '0123456789', 'message' => 'There will be service tomorrow evening.'],
+    ['name' => 'Another Person', 'contact' => '9876543210', 'message' => 'Kindly note that service has been postponed.']
+];
+
+$request = $SMSObj->send($data);
+echo json_encode($request);
+```
+
+### Schedule when to send the message
+A message can be scheduled to be delivered at a specific date and time. This can be done by setting the date and time at which the message should be sent to the variable named schedule (YYYY-MM-DD HH:mm).
+```php
+$data['schedule'] = date('Y-m-d H:i');  // 2022-06-21 21:51
 $data['recipient'] = [
     ['name' => 'Test User', 'contact' => '0123456789', 'message' => 'There will be service tomorrow evening.'],
     ['name' => 'Another Person', 'contact' => '9876543210', 'message' => 'Kindly note that service has been postponed.']
